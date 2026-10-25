@@ -1,27 +1,34 @@
 import { useEffect, useRef, type PointerEvent } from 'react';
 import { RotateCw } from 'lucide-react';
-import { cropGeometry, frameLayout, limitZoom, type LayoutStyle, type Photo } from '@/lib/photo-renderer';
-import { sizes, type OutputSize } from '@/lib/presentation';
+import { limitZoom, type LayoutStyle, type Photo } from '@/lib/photo-renderer';
+import { type OutputSize, type StoryPresentation, defaultStoryPresentation } from '@/lib/presentation';
+import { StoryOverlay } from '@/components/story-overlay';
+import { compositionCrop, compositionLayout, type CompositionMode } from '@/lib/composition-renderer';
 
 type Props = {
   canvas: HTMLCanvasElement;
   photo: Photo;
   frame: LayoutStyle;
   size?: OutputSize;
+  mode?: CompositionMode;
+  story?: StoryPresentation;
+  handle?: string;
+  guides?: boolean;
+  ui?: boolean;
   onChange: (patch: Partial<Photo>) => void;
 };
 type Point = { x: number; y: number };
 
-export function CropPreview({ canvas, photo, frame, size = 'portrait', onChange }: Props) {
+export function CropPreview({ canvas, photo, frame, size = 'portrait', mode = 'framed', story = defaultStoryPresentation, handle = '', guides = false, ui = false, onChange }: Props) {
   const preview = useRef<HTMLCanvasElement>(null);
   const pointers = useRef(new Map<number, Point>());
   const drag = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
   const pinch = useRef({ distance: 1, zoom: 1 });
-  const layout = frameLayout(frame, size);
-  const output = sizes[size];
-  const crop = cropGeometry(photo, frame, size);
+  const output = compositionLayout(mode, frame, size, story);
+  const layout = output.rect;
+  const crop = compositionCrop(photo, mode, frame, size, story);
 
-  useEffect(() => { pointers.current.clear(); }, [size]);
+  useEffect(() => { pointers.current.clear(); }, [size, mode, story.template, story.showMetadata]);
 
   useEffect(() => {
     const ctx = preview.current?.getContext('2d');
@@ -29,7 +36,7 @@ export function CropPreview({ canvas, photo, frame, size = 'portrait', onChange 
   }, [canvas]);
 
   const changeCrop = (patch: Partial<Photo>) => {
-    const next = cropGeometry({ ...photo, ...patch }, frame, size);
+    const next = compositionCrop({ ...photo, ...patch }, mode, frame, size, story);
     onChange({ ...patch, zoom: next.zoom, offsetX: next.offsetX, offsetY: next.offsetY });
   };
   const setZoom = (zoom: number) => changeCrop({ zoom: limitZoom(zoom) });
@@ -73,6 +80,8 @@ export function CropPreview({ canvas, photo, frame, size = 'portrait', onChange 
     <>
       <div className="preview-canvas" style={{ aspectRatio: `${output.width} / ${output.height}` }}>
         <canvas ref={preview} className="preview-artwork" width={output.width} height={output.height} role="img" aria-label={`Vista previa del marco y encuadre final, ${output.width} por ${output.height} píxeles`} data-testid="canvas-photo-preview" />
+        {mode === 'triptych' && <div className="triptych-guides" aria-hidden="true"><span /><span /><span /></div>}
+        {size === 'story' && mode !== 'triptych' && <StoryOverlay guides={guides} ui={ui} handle={handle} />}
         {photo.image && <div
           className="crop-hit-area"
           style={{ left: `${layout.x / output.width * 100}%`, top: `${layout.y / output.height * 100}%`, width: `${layout.width / output.width * 100}%`, height: `${layout.height / output.height * 100}%`, borderRadius: `${layout.radius / layout.width * 100}%` }}

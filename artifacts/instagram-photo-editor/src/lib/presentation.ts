@@ -24,5 +24,13 @@ export const palettes = {
   wine: { name: 'Burdeos editorial', description: 'Vino oscuro sobre marfil' },
 } as const;
 export type ColorPalette = keyof typeof palettes;
-export type Presentation = { size: OutputSize; font: FontStyle; palette: ColorPalette };
-export const defaultPresentation: Presentation = { size: 'portrait', font: 'original', palette: 'original' };
+export const storyTemplates = {
+  editorial: { name: 'Editorial', description: 'Título superior · fotografía enmarcada' },
+  exhibition: { name: 'Exposición', description: 'Fotografía protagonista · título al pie' },
+  cover: { name: 'Portada', description: 'Imagen completa · texto sobre degradado' },
+} as const;
+export type StoryTemplate = keyof typeof storyTemplates;
+export type StoryPresentation = { template: StoryTemplate; showMetadata: boolean };
+export const defaultStoryPresentation: StoryPresentation = { template: 'editorial', showMetadata: true };
+export type Presentation = { size: OutputSize; font: FontStyle; palette: ColorPalette; story: StoryPresentation };
+export const defaultPresentation: Presentation = { size: 'portrait', font: 'original', palette: 'original', story: defaultStoryPresentation };

@@ -9,6 +9,9 @@ export type Photo = {
   iso: string;
   focal: string;
   camera: string;
+  storyTitle: string;
+  storySubtitle: string;
+  storyEyebrow: string;
   brightness: number;
   contrast: number;
   saturation: number;
@@ -96,6 +99,7 @@ export function presentationColors(photo: Photo, frame: LayoutStyle, palette: Pr
 
 export const blankPhoto = (): Photo => ({
   file: null, image: null, url: '', f: '', s: '', iso: '', focal: '', camera: '',
+  storyTitle: '', storySubtitle: '', storyEyebrow: '',
   brightness: 100, contrast: 100, saturation: 100, rotation: 0, zoom: 1, offsetX: 0, offsetY: 0,
 });
 
@@ -104,18 +108,22 @@ export const limitZoom = (zoom: number) => Number.isFinite(zoom) ? Math.max(1, M
 
 export function cropGeometry(photo: Photo, frame: LayoutStyle, size: OutputSize = 'portrait') {
   const layout = frameLayout(frame, size);
+  return coverGeometry(photo, layout.width, layout.height);
+}
+
+export function coverGeometry(photo: Photo, width: number, height: number) {
   const rotated = Math.abs(photo.rotation % 180) === 90;
   const iw = (rotated ? photo.image?.naturalHeight : photo.image?.naturalWidth) || 1;
   const ih = (rotated ? photo.image?.naturalWidth : photo.image?.naturalHeight) || 1;
   // Always cover: the same invariant protects dragging, zoom, rotation, frame changes and exports.
   const zoom = limitZoom(photo.zoom);
-  const scale = Math.max(layout.width / iw, layout.height / ih) * zoom;
-  const maxX = Math.max(0, (iw * scale - layout.width) / 2);
-  const maxY = Math.max(0, (ih * scale - layout.height) / 2);
+  const scale = Math.max(width / iw, height / ih) * zoom;
+  const maxX = Math.max(0, (iw * scale - width) / 2);
+  const maxY = Math.max(0, (ih * scale - height) / 2);
   return { zoom, scale, maxX, maxY, offsetX: Math.max(-maxX, Math.min(maxX, photo.offsetX)), offsetY: Math.max(-maxY, Math.min(maxY, photo.offsetY)) };
 }
 
-function parts(photo: Photo) {
+export function parts(photo: Photo) {
   const values: string[] = [];
   if (photo.f.trim()) values.push(/^f\//i.test(photo.f.trim()) ? photo.f.trim() : `f/${photo.f.trim()}`);
   if (photo.s.trim()) values.push(/s$/i.test(photo.s.trim()) ? photo.s.trim() : `${photo.s.trim()} s`);
@@ -124,13 +132,14 @@ function parts(photo: Photo) {
   return values;
 }
 
-export function paintCanvas(index: number, photo: Photo, handle: string, frame: LayoutStyle, presentation: Presentation = defaultPresentation) {
+export function paintCanvas(index: number, photo: Photo, handle: string, frame: LayoutStyle, presentation: Presentation = defaultPresentation, renderScale = 1) {
   const output = sizes[presentation.size];
   const canvas = document.createElement('canvas');
-  canvas.width = output.width;
-  canvas.height = output.height;
+  canvas.width = Math.round(output.width * renderScale);
+  canvas.height = Math.round(output.height * renderScale);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Este navegador no permite generar la imagen.');
+  ctx.scale(renderScale, renderScale);
   const layout = { ...frameLayout(frame, presentation.size), ...presentationColors(photo, frame, presentation.palette) };
   const font = fonts[presentation.font].family || layout.font;
   const footerShift = output.height - 1350 - output.safeBottom;

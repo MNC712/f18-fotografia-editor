@@ -4,13 +4,18 @@ Editor de imágenes con marcos formales y modernos, ficha técnica y firma. El p
 
 ## Funciones
 
-- Tres fotografías editables, con lectura EXIF cuando está disponible.
+- Hasta cuatro fotografías editables, con carga múltiple, reordenación y lectura EXIF cuando está disponible.
 - Siete marcos, incluido ancho completo y Prisma.
 - Arrastrar, ampliar y girar la fotografía, sin dejar espacios vacíos en el marco.
 - Formatos: 1080 × 1350, 1080 × 1440, 1080 × 1080, 1080 × 566 e historias 1080 × 1920.
 - Tipografías y paletas, incluida una paleta automática basada en la imagen.
 - Ficha técnica con apertura, obturación, ISO, focal, cámara y firma.
-- Exportación JPEG con calidad 100 % o PNG sin pérdida. La resolución original limita el detalle disponible.
+- Carruseles de dos a cuatro fotos con vista previa de la publicación.
+- Recorte sin marco y feed 3×1: una fotografía dividida en tres publicaciones numeradas.
+- Plantillas de historias con títulos, ficha técnica opcional y vista de zonas seguras.
+- Exportación desde el original: máxima resolución útil, doble resolución o tamaño Instagram. PNG sin pérdida o JPEG con calidad 100 %. La resolución original y el recorte limitan el detalle disponible.
+- Descarga conjunta en un único ZIP, sin alterar la calidad de las imágenes, además de descarga individual.
+- Guardado automático local en IndexedDB y recuperación del proyecto en el mismo navegador y dispositivo, con protección contra sobrescrituras entre pestañas. No es una copia de seguridad externa.
 
 ## Ejecutar
 
@@ -36,7 +41,7 @@ Los archivos compilados se generan en `artifacts/instagram-photo-editor/dist/pub
 
 ```bash
 pnpm --filter @workspace/instagram-photo-editor run typecheck
-node --experimental-strip-types --test artifacts/instagram-photo-editor/src/lib/photo-renderer.test.ts
+node --experimental-strip-types --test artifacts/instagram-photo-editor/src/lib/*.test.ts
 ```
 
 ## Estructura

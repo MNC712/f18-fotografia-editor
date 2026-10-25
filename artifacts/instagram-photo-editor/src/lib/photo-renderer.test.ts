@@ -113,7 +113,7 @@ test('every size, font and palette exports matching dimensions, protected crop a
             }, { get: (target, key) => Reflect.get(target, key) ?? (() => {}) });
             globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => context }) } as unknown as Document;
             const p = { ...photo, f: '1.8', s: '1/1000', iso: '400', focal: '85', camera: 'Cámara de prueba', zoom: 2, offsetX: 1e6, offsetY: -1e6 };
-            const canvas = paintCanvas(0, p, '@foto', frame, { size, font, palette });
+            const canvas = paintCanvas(0, p, '@foto', frame, { ...defaultPresentation, size, font, palette });
             assert.equal(canvas.width, sizes[size].width);
             assert.equal(canvas.height, sizes[size].height);
             const rect = frameLayout(frame, size), crop = cropGeometry(p, frame, size);
