@@ -37,6 +37,8 @@ PORT=5173 BASE_PATH=/ pnpm --filter @workspace/instagram-photo-editor run serve
 
 Los archivos compilados se generan en `artifacts/instagram-photo-editor/dist/public`.
 
+Para hosting con despliegue automático desde la rama `main`, también hay una copia ya compilada en la **raíz del repositorio**: `index.html`, `assets/`, `favicon.svg` y `robots.txt`. Configura el directorio público del hosting para publicar la raíz de esta rama. Esta app estática no requiere PHP, Node.js ni una API.
+
 ## Publicar los archivos estáticos del sitio
 
 El directorio `docs/` contiene el sitio compilado, con `index.html` en su raíz y sus recursos en `docs/assets/`.
