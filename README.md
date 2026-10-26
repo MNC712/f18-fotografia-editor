@@ -37,6 +37,15 @@ PORT=5173 BASE_PATH=/ pnpm --filter @workspace/instagram-photo-editor run serve
 
 Los archivos compilados se generan en `artifacts/instagram-photo-editor/dist/public`.
 
+## Publicar los archivos estáticos del sitio
+
+El directorio `docs/` contiene el sitio compilado, con `index.html` en su raíz y sus recursos en `docs/assets/`.
+
+- Para el hosting del dominio propio: descarga la carpeta `docs/` y sube **su contenido** (no la carpeta contenedora) a la raíz pública del dominio, junto con `index.html` y `assets/`.
+- Para GitHub Pages: configura la fuente como rama `main`, carpeta `/docs`, en Settings → Pages.
+
+La aplicación no necesita Node.js, API ni base de datos cuando se sirve como sitio estático. La edición y el procesamiento de fotografías ocurren en el navegador.
+
 ## Comprobaciones
 
 ```bash
