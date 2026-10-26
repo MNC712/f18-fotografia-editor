@@ -1,0 +1,6 @@
+Options -Indexes
+<FilesMatch "^(bootstrap|service|uploads)\.php$">
+  Require all denied
+</FilesMatch>
+# Parent directory must have the Ferozo password protection enabled.
+# Do not put credentials or an .htpasswd file in this public directory.

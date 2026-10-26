@@ -8,6 +8,8 @@ import { compositionModes, compositionSize, compositionLayout, paintComposition,
 import { PublicationView, ProfileView } from '@/components/preview-views';
 import { StoryView, StoryToggles } from '@/components/story-overlay';
 import { CropPreview } from '@/components/crop-preview';
+import { ToolsNavigation, type ToolId } from '@/components/tools-nav';
+import { RafflesTool } from '@/components/raffles/raffles-tool';
 import { sizes, fonts, palettes, defaultPresentation, type Presentation, type OutputSize, type FontStyle, type ColorPalette, type StoryTemplate, storyTemplates } from '@/lib/presentation';
 import { type Crop, type LocalProject } from '@/lib/local-project';
 import { useLocalProject } from '@/lib/use-local-project';
@@ -99,6 +101,24 @@ async function readJpegExif(file: File): Promise<Record<string, unknown> | undef
 }
 
 function App() {
+  const [tool, setTool] = useState<ToolId>(() => window.location.hash === '#sorteos' ? 'raffles' : 'photo-editor');
+  const selectTool = (id: ToolId) => {
+    setTool(id);
+    history.replaceState(null, '', id === 'raffles' ? '#sorteos' : window.location.pathname + window.location.search);
+  };
+  useEffect(() => {
+    const original = (window as unknown as { __f18Meta?: { title: string; description: string } }).__f18Meta ??= {
+      title: document.title, description: document.querySelector('meta[name="description"]')?.getAttribute('content') ?? '',
+    };
+    const meta = document.querySelector('meta[name="description"]');
+    document.title = tool === 'raffles' ? 'Sorteos · Foco de campo' : original.title;
+    meta?.setAttribute('content', tool === 'raffles' ? 'Sorteos con premios, ganadores e historias para publicar.' : original.description);
+  }, [tool]);
+  useEffect(() => {
+    const onHash = () => setTool(window.location.hash === '#sorteos' ? 'raffles' : 'photo-editor');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const [photos, setPhotos] = useState<Photo[]>(() => Array.from({ length: MAX_SLOTS }, () => blankPhoto()));
   const [handle, setHandle] = useState('@f18.fotografia');
   const [frame, setFrame] = useState<LayoutStyle>('fullwidth');
@@ -383,9 +403,13 @@ function App() {
         <a className="brand" href="/" aria-label="Foco, inicio">
           <span className="brand-mark">f/</span><span className="brand-name">foco de campo</span>
         </a>
-        <span className="top-meta">Laboratorio de carruseles · edición local</span>
+        <div className="topbar-tools">
+          <ToolsNavigation active={tool} onSelect={selectTool} />
+          <span className="top-meta">{tool === 'raffles' ? 'Sorteos · servidor propio' : 'Laboratorio de carruseles · edición local'}</span>
+        </div>
       </header>
-      <main className="main">
+      <RafflesTool active={tool === 'raffles'} onOpenEditor={() => selectTool('photo-editor')} />
+      <main className="main" hidden={tool !== 'photo-editor'}>
         <section className="intro">
           <div>
             <div className="eyebrow">Edición para publicación</div>
@@ -548,7 +572,7 @@ function App() {
           </aside>
         </div>
       </main>
-      <footer className="footer"><span>FOCO DE CAMPO · HERRAMIENTA PERSONAL</span><span>ARCHIVOS LOCALES · SIN SUBIDAS · SIN PUBLICACIÓN AUTOMÁTICA</span></footer>
+      <footer className="footer"><span>FOCO DE CAMPO · HERRAMIENTA PERSONAL</span>{tool === 'raffles' ? <span>SORTEOS GUARDADOS EN TU SERVIDOR · SIN PUBLICACIÓN AUTOMÁTICA</span> : <span>ARCHIVOS LOCALES · SIN SUBIDAS · SIN PUBLICACIÓN AUTOMÁTICA</span>}</footer>
     </div>
   );
 }

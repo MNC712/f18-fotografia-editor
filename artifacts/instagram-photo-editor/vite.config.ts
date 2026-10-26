@@ -20,6 +20,10 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const basePath = process.env.BASE_PATH;
+const isPhpService = (url = '') => {
+  try { return decodeURIComponent(url).includes('/sorteos-api'); }
+  catch { return url.includes('/sorteos-api'); }
+};
 
 if (!basePath) {
   throw new Error(
@@ -30,6 +34,29 @@ if (!basePath) {
 export default defineConfig({
   base: basePath,
   plugins: [
+    {
+      name: 'php-requires-hosting',
+      configureServer(server) {
+        // Vite serves public files verbatim; never expose PHP source in preview.
+        server.middlewares.use((req, res, next) => {
+          if (isPhpService(req.url)) {
+            res.statusCode = 503;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(JSON.stringify({ error: 'Sorteos requiere PHP y MySQL en tu hosting. Instala el paquete para Ferozo siguiendo hosting/README.md. No se guardaron datos; el editor sigue disponible.' }));
+          } else next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (isPhpService(req.url)) {
+            res.statusCode = 503;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify({ error: 'Esta vista previa no ejecuta PHP. Configura Sorteos en tu hosting Ferozo.' }));
+          } else next();
+        });
+      },
+    },
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
