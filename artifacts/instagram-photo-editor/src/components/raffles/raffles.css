@@ -100,3 +100,14 @@
 .rf-status { min-height:20px; margin:0 0 12px; font-size:13px; color:#33664d; }
 .rf-status.error { color:#a43724; }
 .rf-status.saving { color:#6b7a70; }
+.rf-all { width:100%; min-height:64px; display:flex; gap:12px; align-items:center; text-align:left; padding:12px 16px; border:1px solid #d9d6cb; border-radius:12px; background:#faf9f5; color:var(--rf-green); }
+.rf-all span { display:grid; gap:2px; }
+.rf-all strong { font:600 17px var(--app-font-serif); }
+.rf-all small { font-size:12px; color:#6b7a70; }
+.rf-all.active { background:var(--rf-green); border-color:var(--rf-green); color:#f5efe2; }
+.rf-all.active small { color:rgba(245,239,226,.8); }
+.rf-all:focus-visible { outline:3px solid hsl(var(--ring)); outline-offset:2px; }
+.rf-sub { margin:0; font:500 10.5px var(--app-font-mono); letter-spacing:.12em; text-transform:uppercase; color:#8b8f89; }
+.rf-story-wrap.is-tall { max-height:80vh; overflow:auto; align-items:start; }
+.rf-story-wrap.is-tall .rf-story { width:min(100%,460px); }
+@media (min-width:768px) and (max-width:1024px) { .rf-results { grid-template-columns:minmax(260px,1fr) minmax(0,1.1fr); gap:20px; } .rf-winners { max-height:36vh; } .rf-story-wrap { padding:16px; } }

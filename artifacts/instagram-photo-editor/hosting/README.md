@@ -8,11 +8,23 @@ privados y el JSON conserva sus referencias, no sus bytes.
 El editor fotográfico sigue procesando y guardando sus fotos **solo en el
 dispositivo**. No se suben a este servicio.
 
+## Presentación de resultados
+
+La vista abre por defecto una imagen conjunta con todos los ganadores, sus
+premios, fotos y firma de Instagram. Se descarga como PNG sin pérdida. Para
+listas cortas mide 1080 × 1920; si hay muchos resultados o nombres largos,
+aumenta la altura para conservar todos los datos legibles. La pantalla informa
+las dimensiones reales. Una imagen más alta no cabe en una única historia de
+Instagram sin recorte: se conserva como resumen completo.
+
+También se conservan la selección y descarga de cada historia individual de
+1080 × 1920 y el ZIP de historias individuales para publicar sin cortes.
+
 ## Requisitos
 
 - PHP **8.1 o posterior** con JSON, mbstring, fileinfo, GD con JPEG/PNG/WebP;
   EXIF recomendado para orientar fotos de teléfonos.
-- HTTPS y protección de directorio de Ferozo aplicada al portal **y a su API**.
+- HTTP o HTTPS, con protección de directorio de Ferozo aplicada al portal **y a su API**.
   PHP debe recibir `REMOTE_USER` validado por Apache. Si CGI/FastCGI no lo
   transmite, pide al hosting habilitarlo; **no desactives este control**.
 - Sistema de archivos local con `flock`, reemplazo atómico por `rename` y
@@ -46,7 +58,7 @@ compilar con el `BASE_PATH` correspondiente.
 
 ## 2. Almacenamiento automático, sin base de datos
 
-Al acceder autenticado por HTTPS, PHP prepara automáticamente esta estructura:
+Al acceder autenticado por HTTP o HTTPS, PHP prepara automáticamente esta estructura:
 
 ```
 carpeta-de-tu-cuenta/
@@ -74,7 +86,16 @@ público. Solo contiene rutas y la exigencia de HTTPS; no contiene credenciales.
 Para otra ubicación del propio archivo de configuración, define en el servidor
 `F18_RAFFLE_CONFIG` con su ruta absoluta privada. Las rutas del JSON y de fotos
 deben ser absolutas, privadas y escribibles; no se aceptan enlaces simbólicos
-para el JSON ni su bloqueo. Mantén `require_https => true`.
+para el JSON ni su bloqueo. El valor predeterminado es `require_https => false`
+para permitir un hosting sin certificado SSL. Si existe una configuración
+privada anterior con `require_https => true`, cámbialo a `false` allí para
+permitir HTTP; la actualización no sobrescribe tu configuración privada.
+
+**Advertencia:** HTTP no cifra contraseñas, nombres ni fotografías. La
+protección de directorio y CSRF siguen siendo obligatorias, pero no sustituyen
+el cifrado. Usa una contraseña exclusiva y una red de confianza. Cuando tengas
+un certificado válido, puedes volver a `require_https => true`. Las cookies de
+sesión son HttpOnly y SameSite=Strict; se marcan Secure al acceder por HTTPS.
 
 ### Si instalaste antes la versión MySQL
 
@@ -90,7 +111,8 @@ ejemplo JSON, o retirarla para usar las rutas automáticas.
 
 En Ferozo, usa la opción de restringir acceso a un directorio/carpeta para
 proteger **todo el directorio público del dominio** con usuario y contraseña.
-La protección debe heredarse en `sorteos-api/`. Usa una contraseña fuerte y HTTPS.
+La protección debe heredarse en `sorteos-api/`. Usa una contraseña fuerte y
+exclusiva; HTTPS es recomendable pero no obligatorio en esta versión.
 
 La API solo reconoce `REMOTE_USER` establecido por el servidor web. No acepta
 nombres de usuario enviados por cabeceras del navegador. No agregues

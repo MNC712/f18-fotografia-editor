@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { normalizeHandle, renderRaffleStory } from './raffle-story.ts';
+import { normalizeHandle, renderRaffleCollective, renderRaffleStory } from './raffle-story.ts';
 
 type Printed = { text: string; y: number; width: number; font: string };
 async function canvasFixture(run: (printed: Printed[], events: string[]) => Promise<void>) {
@@ -69,4 +69,67 @@ test('story waits for real authenticated image and fonts, and fails rather than 
 test('Instagram signature is normalized and has a safe default', () => {
   assert.equal(normalizeHandle('  f18.fotografia '), '@f18.fotografia');
   assert.equal(normalizeHandle('  '), '@f18.fotografia');
+});
+
+const many = (n: number, extra: Partial<typeof result> = {}) => Array.from({ length: n }, (_, i) => ({ ...result, prize_id: i + 1, prize_name: `Premio ${i + 1}`, winner_name: `Ganador ${i + 1}`, ...extra }));
+const sizes = (printed: Printed[]) => printed.map(p => Number(p.font.match(/(\d+)px/)?.[1]));
+
+test('collective image with one result is a 1080x1920 story with winner, prize and signature', async () => {
+  await canvasFixture(async (printed) => {
+    const c = await renderRaffleCollective('Sorteo de otoño', [result], '@f18.fotografia');
+    assert.equal(c.width, 1080); assert.equal(c.height, 1920);
+    const all = printed.map(p => p.text).join(' ');
+    for (const v of ['Lucía Ferrer', 'Sesión de retrato', '@f18.fotografia']) assert.ok(all.includes(v));
+  });
+});
+
+test('collective image with several results keeps story size and lists every pair', async () => {
+  await canvasFixture(async (printed) => {
+    const list = many(5);
+    const c = await renderRaffleCollective('Sorteo', list, '@f18.fotografia');
+    assert.equal(c.height, 1920);
+    for (const r of list) { assert.ok(printed.some(p => p.text === r.winner_name)); assert.ok(printed.some(p => p.text === r.prize_name)); }
+    assert.ok(printed.every(p => p.width <= 900 && p.y < 1920));
+  });
+});
+
+test('30 results all appear legibly, image grows taller instead of shrinking text', async () => {
+  await canvasFixture(async (printed) => {
+    const list = many(30);
+    const c = await renderRaffleCollective('Sorteo grande', list, '@f18.fotografia');
+    assert.equal(c.width, 1080); assert.ok(c.height > 1920);
+    for (const r of list) { assert.ok(printed.some(p => p.text === r.winner_name)); assert.ok(printed.some(p => p.text === r.prize_name)); }
+    assert.ok(sizes(printed).every(s => s >= 20));
+    assert.ok(printed.every(p => p.y < c.height - 60));
+  });
+});
+
+test('collective long names and prizes are wrapped in full, never truncated', async () => {
+  await canvasFixture(async (printed) => {
+    const list = many(3, { prize_name: 'W'.repeat(120), winner_name: 'M'.repeat(100) });
+    await renderRaffleCollective('N'.repeat(120), list, '@f18.fotografia');
+    const all = printed.filter(p => !p.text.includes('PREMIO')).map(p => p.text).join('');
+    assert.equal(all.split('M').length - 1, 300); assert.equal(all.split('W').length - 1, 360);
+    assert.ok(printed.every(p => !p.text.includes('…') && p.width <= 900));
+  });
+});
+
+test('collective waits for prize photos and fails clearly when one is missing', async () => {
+  await canvasFixture(async (_printed, events) => {
+    await renderRaffleCollective('Retratos', many(2, { image_url: 'ok' }), '@f18.fotografia');
+    assert.ok(events.lastIndexOf('image-loaded') < events.indexOf('image-painted'));
+    assert.ok(events.indexOf('font') < events.indexOf('paint'));
+    await assert.rejects(renderRaffleCollective('Retratos', [result, { ...result, prize_id: 9, prize_name: 'Álbum', image_url: 'broken' }], '@f18.fotografia'), /imagen del premio "Álbum"/);
+  });
+});
+
+test('30 maximum-length names and prizes remain complete within a mobile-friendly canvas area', async () => {
+  await canvasFixture(async (printed) => {
+    const c = await renderRaffleCollective('N'.repeat(120), many(30, { prize_name: 'W'.repeat(120), winner_name: 'M'.repeat(100) }), '@f18.fotografia');
+    const text = printed.map(p => p.text).join('');
+    assert.equal(text.split('M').length - 1, 3001); // 3000 name characters plus the footer PREM… label.
+    assert.equal(text.split('W').length - 1, 3600);
+    assert.ok(c.width * c.height <= 16_000_000);
+    assert.ok(c.height < 16384);
+  });
 });

@@ -34,7 +34,9 @@ function configuration(): array {
     $private = dirname($documentRoot) . '/f18-private';
     $explicitConfig = getenv('F18_RAFFLE_CONFIG');
     $configPath = $explicitConfig ?: $private . '/config.php';
-    $config = ['data_file' => $private . '/sorteos.json', 'upload_dir' => $private . '/prizes', 'require_https' => true];
+    // HTTP is supported at the owner's request. Directory auth and CSRF remain mandatory.
+    // A private configuration can opt back into HTTPS-only access.
+    $config = ['data_file' => $private . '/sorteos.json', 'upload_dir' => $private . '/prizes', 'require_https' => false];
     if ($explicitConfig || file_exists($configPath)) {
         $realConfig = realpath($configPath);
         if (!$realConfig || $realConfig === $documentRoot || str_starts_with($realConfig, $documentRoot . DIRECTORY_SEPARATOR)) {
@@ -49,7 +51,7 @@ function configuration(): array {
         throw new RaffleError('Configura rutas absolutas privadas para el JSON y los premios.', 503);
     }
     if (!str_ends_with($config['data_file'], '.json')) throw new RaffleError('El archivo de datos debe tener extensión .json.', 503);
-    if (($config['require_https'] ?? true) && ($_SERVER['HTTPS'] ?? '') !== 'on') {
+    if (($config['require_https'] ?? false) && ($_SERVER['HTTPS'] ?? '') !== 'on') {
         throw new RaffleError('Abre el sitio mediante HTTPS para proteger el acceso.', 403);
     }
     // Resolve the closest existing ancestor BEFORE creating directories (including symlinks).
