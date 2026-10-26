@@ -43,7 +43,7 @@ export default defineConfig({
             res.statusCode = 503;
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
             res.setHeader('Cache-Control', 'no-store');
-            res.end(JSON.stringify({ error: 'Sorteos requiere PHP y MySQL en tu hosting. Instala el paquete para Ferozo siguiendo hosting/README.md. No se guardaron datos; el editor sigue disponible.' }));
+            res.end(JSON.stringify({ error: 'Sorteos guarda en JSON privado, sin MySQL. Esta vista previa no ejecuta PHP: usa tu hosting Ferozo siguiendo hosting/README.md. No se guardaron datos; el editor sigue disponible.' }));
           } else next();
         });
       },

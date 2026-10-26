@@ -15,6 +15,5 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(resolve(app, 'dist/public'), resolve(output, 'public_html'), { recursive: true });
 await cp(resolve(hosting, 'config.example.php'), resolve(output, 'config.example.php'));
-await cp(resolve(hosting, 'schema.sql'), resolve(output, 'schema.sql'));
 await cp(resolve(hosting, 'README.md'), resolve(output, 'INSTALACION.md'));
 console.log(`Paquete preparado: ${output}\nNo incluye credenciales ni datos de sorteos.`);

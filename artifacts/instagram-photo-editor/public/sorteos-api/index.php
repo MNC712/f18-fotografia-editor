@@ -31,18 +31,13 @@ try {
         if (!is_string($supplied) || !hash_equals($token, $supplied)) throw new RaffleError('La sesión de seguridad venció. Vuelve a intentar la operación.', 403);
         $data = inputData();
     }
-    $db = new PDO($config['dsn'], $config['user'], $config['password'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-    $db->exec("SET time_zone = '+00:00'");
-    $service = new RaffleService($db, $config['upload_dir']);
+    $service = new RaffleService(new JsonRaffleStore($config['data_file']), $config['upload_dir']);
     if ($action === 'image') {
         $image = $service->image(positiveId($_GET['id'] ?? null));
         header('Content-Type: ' . $image['mime']);
-        header('Content-Disposition: inline; filename="premio.' . pathinfo($image['path'], PATHINFO_EXTENSION) . '"');
-        header('Content-Length: ' . filesize($image['path']));
-        readfile($image['path']); exit;
+        header('Content-Disposition: inline; filename="premio.' . $image['extension'] . '"');
+        header('Content-Length: ' . strlen($image['bytes']));
+        echo $image['bytes']; exit;
     }
     if ($action === 'list') respond(['data' => $service->listing()]);
     if ($action === 'get') respond(['data' => $service->readDetail(positiveId($_GET['id'] ?? null))]);
@@ -51,5 +46,5 @@ try {
     respond(['error' => $e->getMessage(), 'duplicates' => $e->duplicates], $e->status);
 } catch (Throwable $e) {
     error_log('F18 Sorteos: ' . get_class($e) . ' code=' . $e->getCode());
-    respond(['error' => 'No se pudo completar la operación. Revisa la conexión MySQL, el esquema y los permisos privados del hosting. No se confirmó ningún cambio.'], 503);
+    respond(['error' => 'No se pudo completar la operación. Revisa el archivo JSON y los permisos de la carpeta privada del hosting. No se confirmó ningún cambio.'], 503);
 }

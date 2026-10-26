@@ -70,5 +70,8 @@ replit.md
 # Private Ferozo configuration and data
 **/f18-private/
 **/hosting/config.php
+**/sorteos.json
+**/sorteos.json.lock
+.sorteos-*
 *.sql.gz
 /generated-artifacts/

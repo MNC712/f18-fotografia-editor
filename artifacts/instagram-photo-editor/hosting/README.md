@@ -1,132 +1,159 @@
-# Instalar Sorteos en Donweb / Ferozo
+# Sorteos con JSON privado en Donweb / Ferozo
 
-El portal tiene dos herramientas: el editor sigue procesando fotos **solo en el
-dispositivo**; Sorteos guarda nombres, premios y resultados en **tu MySQL** y las
-fotos de premios en una carpeta privada de **tu hosting**.
+**No necesita MySQL, phpMyAdmin, esquema SQL ni credenciales de base de datos.**
+Todos los sorteos, participantes, premios y resultados se guardan en un único
+`sorteos.json` privado del hosting. Las fotos de premios se guardan como archivos
+privados y el JSON conserva sus referencias, no sus bytes.
+
+El editor fotográfico sigue procesando y guardando sus fotos **solo en el
+dispositivo**. No se suben a este servicio.
 
 ## Requisitos
 
-- PHP **8.1 o posterior**, MySQL 5.7+ o MariaDB 10.3+, tablas InnoDB.
-- Extensiones PHP: PDO MySQL, mbstring, fileinfo, GD con JPEG/PNG/WebP; EXIF
-  recomendado para orientar fotos de iPad/iPhone.
-- HTTPS activo. PHP con `memory_limit` de al menos 256M para imágenes de hasta
-  20 megapíxeles, `upload_max_filesize = 8M`, `post_max_size = 10M`.
-- PHP ejecutado por Apache/Ferozo debe recibir **REMOTE_USER** al acceder a un
-  directorio protegido. Si tu modalidad CGI/FastCGI no lo transmite, pide al
-  hosting habilitarlo. La API rechaza acceso si falta, incluso si la página carga.
+- PHP **8.1 o posterior** con JSON, mbstring, fileinfo, GD con JPEG/PNG/WebP;
+  EXIF recomendado para orientar fotos de teléfonos.
+- HTTPS y protección de directorio de Ferozo aplicada al portal **y a su API**.
+  PHP debe recibir `REMOTE_USER` validado por Apache. Si CGI/FastCGI no lo
+  transmite, pide al hosting habilitarlo; **no desactives este control**.
+- Sistema de archivos local con `flock`, reemplazo atómico por `rename` y
+  `fsync`. No usar carpetas de red ni varias máquinas con copias separadas.
+- Permiso de PHP para crear/escribir una carpeta hermana de `DOCUMENT_ROOT`,
+  fuera del directorio público. `memory_limit` recomendado: 256M;
+  `upload_max_filesize = 8M`, `post_max_size = 10M`.
 
-No funciona abriendo `index.html` como archivo local ni en un hosting solo
-estático. La vista previa de Vite muestra una explicación, no datos simulados.
+## 1. Preparar y subir
 
-## 1. Preparar los archivos
+```
+node artifacts/instagram-photo-editor/hosting/package-hosting.mjs
+```
 
-Desde el proyecto: `node artifacts/instagram-photo-editor/hosting/package-hosting.mjs`.
-La salida está en `generated-artifacts/f18-portal-hosting/`:
+Salida: `generated-artifacts/f18-portal-hosting/`:
 
 ```
 public_html/
   index.html
   assets/
   sorteos-api/       # PHP y .htaccess incluidos
-config.example.php
-schema.sql
+config.example.php  # opcional, sin contraseñas
 INSTALACION.md
 ```
 
-Sube **el contenido de public_html** al directorio público de tu dominio, sin
-borrar ni sobrescribir la protección por contraseña existente de Ferozo.
-Incluye archivos ocultos: `sorteos-api/.htaccess`. No reemplaces tu `.htaccess`
-raíz automáticamente. No subas el resto del paquete a la carpeta pública.
-El paquete está compilado para la raíz del dominio. Para una subcarpeta, compila
-con su `BASE_PATH` y copia esa salida en lugar del paquete raíz.
+Sube **solo el contenido de public_html/** al directorio público del dominio.
+Incluye `sorteos-api/.htaccess`, pero **no borres ni reemplaces la protección
+existente de Ferozo ni su .htaccess raíz**. No subas pruebas ni configuraciones
+privadas. El paquete es para la raíz del dominio; una subcarpeta requiere
+compilar con el `BASE_PATH` correspondiente.
 
-## 2. Crear la base y configuración privada
+## 2. Almacenamiento automático, sin base de datos
 
-1. Crea una base MySQL dedicada y un usuario en Ferozo. Usa las credenciales
-   únicamente en el administrador de archivos de tu hosting, **nunca en el chat
-   ni GitHub**.
-2. Importa `schema.sql` en esa base con phpMyAdmin. No lo ejecutes en una base
-   con datos ajenos a esta herramienta.
-3. Junto a `public_html`, **fuera de ella**, crea `f18-private/`. Dentro, copia
-   `config.example.php` como `config.php` y completa el nombre real de base,
-   usuario y contraseña. La ruta por defecto es
-   `dirname(DOCUMENT_ROOT)/f18-private/config.php`. Si tu dominio tiene otra
-   estructura, configura `F18_RAFFLE_CONFIG` en el servidor con la ruta absoluta
-   privada; nunca una ruta bajo la carpeta pública.
-4. La carpeta `prizes/` se creará dentro de `f18-private/`. PHP necesita permiso
-   para escribir ahí. Usa permisos privados (carpeta 700 y archivos 600 cuando
-   el usuario PHP lo permita), nunca 777. Guarda también sesiones PHP en una
-   ubicación privada del servidor.
-5. Conserva `require_https => true`. No subas la configuración real, la base,
-   sesiones ni las fotos privadas al repositorio o al despliegue automático.
+Al acceder autenticado por HTTPS, PHP prepara automáticamente esta estructura:
 
-## 3. Proteger TODO el portal
+```
+carpeta-de-tu-cuenta/
+  public_html/           # DOCUMENT_ROOT del dominio
+  f18-private/           # FUERA del directorio público
+    sorteos.json         # aparece al guardar el primer sorteo
+    sorteos.json.lock    # bloqueo permanente; no borrar ni reemplazar en uso
+    prizes/              # fotos privadas de premios
+```
 
-En Ferozo, usa **Herramientas → Restringir el acceso a un directorio o a una
-carpeta** (el nombre puede variar) para proteger el directorio público completo
-del dominio con usuario y contraseña. La regla debe heredarse en
-`sorteos-api/`. Usa una contraseña fuerte y HTTPS.
+No hay que crear tablas, usuarios MySQL ni una contraseña de base de datos.
+La ruta se calcula desde `DOCUMENT_ROOT`, no desde la carpeta de la API.
+Los datos sobreviven a recargas y se comparten entre dispositivos autorizados.
+Los formularios aún no guardados no se sincronizan; vuelve a abrir o actualiza
+el sorteo antes de editar desde otro dispositivo.
 
-La API solo acepta la identidad **REMOTE_USER** validada por el servidor web.
-No basta un formulario JavaScript ni ocultar el botón de Sorteos. No agregues
-reglas `Require all granted` ni exclusiones para la API. La API no interpreta
-cabeceras de nombre de usuario enviadas por el navegador. Fotos privadas solo
-se sirven por la API autenticada, con `no-store` y `nosniff`.
+Si el hosting no permite crear esa carpeta, créala tú y da permiso de escritura
+al usuario PHP. Usa 700 para carpetas y 600 para archivos cuando sea compatible
+con ese usuario; **nunca 777**. Las sesiones PHP también deben ser privadas.
 
-**Comprobación obligatoria antes de usar datos reales:** en una ventana privada,
-sin introducir credenciales, visita el dominio, `sorteos-api/index.php?action=list`
-y `sorteos-api/index.php?action=image&id=1`. Deben pedir credenciales o rechazar
-acceso (401/403), nunca devolver nombres ni fotos. Con credenciales válidas,
-`action=session` debe devolver JSON con un token de sesión. No compartas ese token.
-Una escritura sin token debe fallar con 403. Si aparece 401 aun autenticado,
-verifica la transmisión de REMOTE_USER con el hosting; **no desactives el control**.
+### Rutas personalizadas (opcional)
 
-## 4. Verificar funcionamiento
+Copia `config.example.php` como `f18-private/config.php`, fuera del sitio
+público. Solo contiene rutas y la exigencia de HTTPS; no contiene credenciales.
+Para otra ubicación del propio archivo de configuración, define en el servidor
+`F18_RAFFLE_CONFIG` con su ruta absoluta privada. Las rutas del JSON y de fotos
+deben ser absolutas, privadas y escribibles; no se aceptan enlaces simbólicos
+para el JSON ni su bloqueo. Mantén `require_https => true`.
 
-En Herramientas → Sorteos:
+### Si instalaste antes la versión MySQL
 
-1. Crea un sorteo de prueba, pega varios nombres, edita uno, prueba un duplicado.
-   Los duplicados rechazan el lote completo con un aviso; no agregan parcialmente.
-2. Crea premios con y sin foto, reemplaza una foto y vuelve a abrir desde otro
-   dispositivo autorizado. Los datos deben persistir.
-3. Sortea: se pide confirmación, cada premio recibe una persona distinta. El
-   resultado queda cerrado. Recargar/reintentar no cambia los ganadores. Para
-   repetir, crea una copia (nuevo borrador sin resultados).
-4. Descarga un PNG y el ZIP. Cada historia es de **1080 × 1920**, sin compresión
-   con pérdida. Instagram puede recomprimir al publicar.
-5. Comprueba el editor: sus fotos y ajustes siguen siendo locales, nunca pasan
-   por MySQL ni por la carpeta de premios.
+Esta actualización **no convierte ni borra tu base anterior**. Si encuentra
+una configuración con `dsn`, se detiene con un aviso para no mostrar un
+almacenamiento vacío como si fuera una migración. Conserva una copia de la base
+y de sus fotos antes de cambiar la configuración. Si ya tienes sorteos reales,
+necesitan una migración planificada; no reemplaces esa configuración todavía.
+Si nunca guardaste datos, puedes sustituir la configuración antigua por el
+ejemplo JSON, o retirarla para usar las rutas automáticas.
 
-Las fechas se guardan en UTC. El azar usa `random_int` del servidor. No es un
-servicio de certificación legal ni obtiene comentarios de Instagram.
+## 3. Proteger el portal
 
-## Mantenimiento y límites
+En Ferozo, usa la opción de restringir acceso a un directorio/carpeta para
+proteger **todo el directorio público del dominio** con usuario y contraseña.
+La protección debe heredarse en `sorteos-api/`. Usa una contraseña fuerte y HTTPS.
 
-- Hasta 5000 participantes y 30 premios por sorteo; foto JPEG/PNG/WebP real de
-  hasta 8 MB y 20 megapíxeles. Las fotos se decodifican/recrean para eliminar
-  contenido ejecutable y metadatos; JPEG se vuelve a codificar en calidad 100.
-- Borrar un sorteo borra participantes, premios, resultados y fotos asociadas.
-  Es irreversible: haz copias de seguridad **de MySQL y f18-private/prizes/**
-  juntas. Duplicar un sorteo crea fotos independientes, sin compartir archivos
-  que un borrado pueda retirar de la copia.
-- Un corte de proceso entre guardar una foto y confirmar la transacción puede
-  dejar un archivo privado huérfano; no borres archivos manualmente sin contrastar
-  la base de datos y conservar una copia.
-- Los formularios no guardados no se sincronizan entre dispositivos. Actualiza
-  los datos antes de editar desde otra sesión; el cierre del sorteo se impone
-  en el servidor.
-- Ante un error de red después de sortear, abre de nuevo el sorteo para consultar
-  el resultado guardado antes de repetir. El servidor devuelve el mismo resultado.
-- Despliegues futuros: actualiza solo los archivos públicos compilados y el
-  servicio PHP, preservando configuración, protección Ferozo, fotos y base de datos.
-- La configuración de seguridad de Apache/Ferozo y su ejecución PHP deben
-  verificarse en tu cuenta real: una prueba local no valida el hosting.
+La API solo reconoce `REMOTE_USER` establecido por el servidor web. No acepta
+nombres de usuario enviados por cabeceras del navegador. No agregues
+`Require all granted` ni excepciones para la API. Las escrituras requieren
+además un token CSRF vinculado a la sesión; fotos y JSON nunca se sirven por
+una URL pública directa.
 
-## Comprobaciones de desarrollo
+## 4. Comprobaciones en tu dominio real
 
-Los arneses temporales que se usaron para comprobar PHP/MySQL y las subidas en
-un servidor de pruebas local no se incluyen en esta copia pública del
-repositorio, porque la raíz se despliega automáticamente al hosting. No instales
-un router de pruebas ni desactives la autenticación en producción. Las
-comprobaciones locales no sustituyen comprobar la protección real del dominio
-en Ferozo como se indica más arriba.
+Antes de usar datos reales:
+
+1. En ventana privada y sin credenciales, abre el portal y
+   `sorteos-api/index.php?action=list` y `?action=image&id=1`.
+   Deben pedir acceso o rechazarlo con 401/403, sin devolver nombres ni fotos.
+2. Con acceso válido, `?action=session` debe devolver un token. No lo compartas.
+   Una escritura sin token o con el de otra sesión debe fallar con 403.
+3. Crea un sorteo de prueba; agrega, edita y elimina participantes. Un lote con
+   duplicados se rechaza completo, sin agregar parcialmente.
+4. Crea premios con y sin foto, reemplaza y elimina fotos. Abre el mismo sorteo
+   en otro dispositivo autorizado: datos y fotos deben seguir disponibles.
+5. Sortea: cada premio recibe una persona distinta. Recargar o volver a enviar
+   la petición devuelve los mismos ganadores. Un sorteo cerrado es de solo
+   lectura; duplicarlo crea un borrador sin resultados y con fotos independientes.
+6. Descarga historias PNG y ZIP: cada historia es de **1080 × 1920**, sin
+   compresión con pérdida. Instagram puede recomprimir al publicar.
+7. Comprueba que el editor conserva sus fotos y proyectos locales.
+
+GitHub y las pruebas locales **no demuestran** que la protección ni los
+permisos de tu hosting real estén bien configurados. La vista previa Vite,
+GitHub Pages y abrir `index.html` local no ejecutan PHP: muestran un aviso,
+no simulan guardar sorteos.
+
+## Integridad, copias y límites
+
+- Cada escritura toma un bloqueo exclusivo, relee el JSON más reciente,
+  valida la operación y guarda un archivo temporal privado en la misma carpeta.
+  Se vacía/sincroniza antes de reemplazar el JSON atómicamente. Las lecturas
+  toman un bloqueo compartido. Varias sesiones no pierden cambios por leer una
+  copia vieja. Los sorteos simultáneos devuelven el mismo resultado cerrado.
+- Un JSON vacío, truncado, incompatible o con estructura inválida provoca un
+  error explícito; **nunca se reinicia ni sobrescribe como una lista vacía**.
+  Conserva el archivo afectado y restaura un respaldo comprobado.
+- Haz copias periódicas de **sorteos.json y prizes/** juntas, sin operaciones
+  de edición en curso. Guárdalas fuera del directorio público y de GitHub.
+  Para restaurar, pausa el acceso y conserva primero los archivos actuales.
+  No borres el bloqueo mientras haya procesos utilizando el servicio.
+- Borrar un sorteo elimina sus datos y fotos; es irreversible. Las fotos
+  retiradas se borran solo tras confirmar el nuevo JSON. Un corte de proceso
+  puede dejar fotos o temporales huérfanos; no los borres sin contrastar un respaldo.
+- Diseñado para uso pequeño en un único hosting. Cada solicitud lee el JSON
+  completo: no es una solución para grandes volúmenes o servidores distribuidos.
+  Límite por sorteo: 5000 participantes y 30 premios; fotos reales JPEG/PNG/WebP
+  de hasta 8 MB y 20 megapíxeles, decodificadas y recreadas sin metadatos.
+- Fechas UTC; selección con `random_int` del servidor. No certifica sorteos
+  legalmente ni obtiene comentarios de Instagram.
+- Actualizaciones: reemplaza solo el producto público; conserva `f18-private`,
+  fotos, sesiones y protección Ferozo. No distribuyas archivos de datos reales.
+
+## Pruebas de desarrollo
+
+En la copia de trabajo se comprueban el servicio JSON, escrituras concurrentes,
+fallos de guardado, rutas privadas y el contrato HTTP usando PHP/Python y
+carpetas temporales aisladas, sin base de datos ni credenciales del hosting.
+Los arneses simulan la identidad de Apache solo en loopback. **No se distribuyen
+en el paquete ni en el repositorio público y nunca deben desplegarse.**
+Estas comprobaciones no sustituyen las pruebas anteriores en tu dominio real.

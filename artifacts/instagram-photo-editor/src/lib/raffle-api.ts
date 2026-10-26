@@ -34,7 +34,7 @@ async function request<T>(action: string, payload?: Record<string, unknown> | Fo
   if (!contentType.includes('application/json')) {
     throw new RaffleApiError(response.status === 401 || response.status === 403
       ? 'Acceso restringido. Abre el sitio con la contraseña del hosting.'
-      : 'Sorteos necesita el servicio PHP y MySQL configurado en el hosting. El editor de fotografías sigue disponible.', response.status);
+      : 'Sorteos guarda en JSON privado y necesita PHP en el hosting, sin MySQL. El editor de fotografías sigue disponible.', response.status);
   }
   const reply = await response.json() as Reply<T>;
   if (!response.ok) {

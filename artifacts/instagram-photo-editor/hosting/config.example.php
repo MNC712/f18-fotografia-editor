@@ -1,10 +1,9 @@
 <?php
-// Copy OUTSIDE public_html to ../f18-private/config.php, edit there (never commit).
-// This example contains no real credentials.
+// OPTIONAL: defaults already use ../f18-private/ outside DOCUMENT_ROOT.
+// Copy OUTSIDE public_html to ../f18-private/config.php only to customize paths.
+// No database, password or credentials are needed.
 return [
-    'dsn' => 'mysql:host=localhost;dbname=YOUR_DATABASE;charset=utf8mb4',
-    'user' => 'YOUR_DATABASE_USER',
-    'password' => 'SET_ONLY_ON_YOUR_HOSTING',
+    'data_file' => __DIR__ . '/sorteos.json',
     'upload_dir' => __DIR__ . '/prizes',
     'require_https' => true,
 ];
